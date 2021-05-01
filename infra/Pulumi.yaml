@@ -1,0 +1,3 @@
+name: helloworld
+runtime: dotnet
+description: helloworld function in .NET 5

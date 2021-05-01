@@ -1,0 +1,105 @@
+name: Import function deployment
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    branches:
+      - main
+
+env:
+  AZCLI_VERSION: 2.20.0
+  DOTNET_VERSION: 3.1.x
+  PULUMI_VERSION: 3.1.0
+  PULUMI_STORAGE_ACCOUNT: martinjtdemostate
+  PULUMI_CONTAINER: pulumi-example
+  PULUMI_STACK_NAME: dotnet5function
+
+jobs:
+  buildAndTest:
+    name: Run Build and Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup DotNet (for code)
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
+
+      - name: Setup DotNet (for pulumi)
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 3.1.x
+
+      - name: Install dependencies
+        run: dotnet restore
+
+      - name: Build Solution
+        run: dotnet build --no-restore --configuration Release --output ./build
+
+      - name: Upload Application Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: importfunction
+          path: ./build
+
+  deploy:
+    name: deploy
+    needs: buildAndTest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      
+      - name: Setup DotNet
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      
+      - name: Get Pulumi cli
+        uses: pulumi/action-install-pulumi-cli@v1
+        with:
+          pulumi-version: ${{ env.PULUMI_VERSION }}
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_PRINCIPAL }}
+
+      - name: Get SAS expiry
+        run:  |
+            SAS_TOKEN_EXPIRATION=`date -u -d 'now + 30 minutes' '+%Y-%m-%dT%H:%MZ'`
+            echo SAS_TOKEN_EXPIRATION=$SAS_TOKEN_EXPIRATION >> $GITHUB_ENV
+
+      - name: Get Azure SAS Token
+        uses: azure/CLI@v1
+        with:
+          azcliversion: ${{ env.AZCLI_VERSION }}
+          inlineScript: |
+            AZURE_STORAGE_SAS_TOKEN=$(az storage container generate-sas --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }} --account-name ${{ env.PULUMI_STORAGE_ACCOUNT }} \
+            -n ${{ env.PULUMI_CONTAINER }} --https-only --permissions rwl --expiry ${{ env.SAS_TOKEN_EXPIRATION }} -o tsv)
+            echo AZURE_STORAGE_SAS_TOKEN=$AZURE_STORAGE_SAS_TOKEN >> $GITHUB_ENV
+
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: importfunction
+          path: ./publish
+
+      - uses: pulumi/actions@v3
+        with:
+          command: up
+          stack-name: ${{ env.PULUMI_STACK_NAME }}
+          work-dir: infra
+          cloud-url: azblob://${{ env.PULUMI_CONTAINER }}
+          upsert: true
+        env:
+          ARM_CLIENT_ID: ${{ fromJSON(secrets.AZURE_PRINCIPAL).clientId }}
+          ARM_CLIENT_SECRET: ${{ fromJSON(secrets.AZURE_PRINCIPAL).clientSecret }}
+          ARM_TENANT_ID: ${{ fromJSON(secrets.AZURE_PRINCIPAL).tenantId }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_PASSPHRASE }}
+          AZURE_STORAGE_ACCOUNT: ${{ env.PULUMI_STORAGE_ACCOUNT }}
+          AZURE_KEYVAULT_AUTH_VIA_CLI: true
