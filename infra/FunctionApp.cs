@@ -49,7 +49,7 @@ public class FunctionApp : ComponentResource
             ResourceGroupName = args.ResourceGroupName,
         });
 
-        var blob = new Blob($"zip={DateTime.UtcNow:s}", new BlobArgs
+        var blob = new Blob("zip", new BlobArgs
         {
             AccountName = appStorage.Name,
             ContainerName = container.Name,
