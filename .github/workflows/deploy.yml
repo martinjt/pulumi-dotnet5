@@ -37,13 +37,17 @@ jobs:
         run: dotnet restore
 
       - name: Build Solution
-        run: dotnet build --no-restore --configuration Release --output ./build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Build Solution
+        run: dotnet publish --no-restore --configuration Release --output ./publish app/app.csproj
 
       - name: Upload Application Artifact
         uses: actions/upload-artifact@v2
         with:
           name: importfunction
-          path: ./build
+          path: ./publish
+          retention-days: 0
 
   deploy:
     name: deploy
