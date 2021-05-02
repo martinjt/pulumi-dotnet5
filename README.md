@@ -12,5 +12,3 @@ This example repo shows how to setup a .NET 5 function to deploy to Azure using 
 
 `PULUMI_PASSPHRASE` this is required by pulumi, can be any string
 `AZURE_PRINCIPAL` JSON representation of the an azure service principal that has contributor rights
-`A
-

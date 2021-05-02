@@ -15,7 +15,7 @@ class HelloworldStack : Stack
             ResourceGroupName = resourceGroup.Name,
         });
 
-        this.Url = Output.Format($"https://{function.DefaultHostname}/api/helloworld");
+        this.Url = Output.Format($"https://{function.DefaultHostname}/api/hello");
     }
 
     [Output]
