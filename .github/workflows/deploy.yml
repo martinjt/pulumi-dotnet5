@@ -1,4 +1,4 @@
-name: Import function deployment
+name: Deploy
 on:
   push:
     branches:
