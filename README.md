@@ -2,6 +2,8 @@
 
 This example repo shows how to setup a .NET 5 function to deploy to Azure using Pulumi via a Github action.
 
+This is the template repo used for my blog post here: https://martinjt.me/2021/05/03/deploying-net-5-azure-functions-with-pulumi-and-github-actions/
+
 ## Pre-requistes
 
 1. Azure subscription (with the ability to create a service principal)
